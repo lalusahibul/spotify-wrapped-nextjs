@@ -1,12 +1,12 @@
-import TopSongs from "../components/TopSongs";
+import { useEffect, useState } from "react";
 
-export default function Playlists({ playlists, topSongs, error }) {
+export default function Playlists({ playlists, error }) {
     if (error) {
         return <p>Error: {error}</p>;
     }
 
-    if (!playlists || !topSongs) {
-        return <p>Memuat data Spotify...</p>;
+    if (!playlists) {
+        return <p>Memuat playlist...</p>;
     }
 
     return (
@@ -21,8 +21,6 @@ export default function Playlists({ playlists, topSongs, error }) {
                     </li>
                 ))}
             </ul>
-            ---
-            <TopSongs songs={topSongs} />
         </div>
     );
 }
@@ -44,16 +42,13 @@ export async function getServerSideProps(context) {
             };
         }
 
-        const headers = {
-            "Authorization": `Bearer ${spotifyAccessToken}`,
-        };
+        const response = await fetch("https://api.spotify.com/v1/me/playlists", {
+            headers: {
+                "Authorization": `Bearer ${spotifyAccessToken}`,
+            },
+        });
 
-        const [playlistsResponse, topSongsResponse] = await Promise.all([
-            fetch("https://api.spotify.com/v1/me/playlists", { headers }),
-            fetch("http://googleusercontent.com/spotify.com/5", { headers }),
-        ]);
-
-        if (playlistsResponse.status === 401 || topSongsResponse.status === 401) {
+        if (response.status === 401) {
             return {
                 redirect: {
                     destination: '/',
@@ -62,23 +57,20 @@ export async function getServerSideProps(context) {
             };
         }
 
-        if (!playlistsResponse.ok || !topSongsResponse.ok) {
-            throw new Error("Gagal mengambil data dari Spotify.");
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error?.message || "Gagal mengambil playlist");
         }
 
-        const [playlistsData, topSongsData] = await Promise.all([
-            playlistsResponse.json(),
-            topSongsResponse.json(),
-        ]);
+        const data = await response.json();
 
         return {
             props: {
-                playlists: playlistsData.items,
-                topSongs: topSongsData.items,
+                playlists: data.items,
             },
         };
     } catch (error) {
-        console.error("Gagal mengambil data:", error);
+        console.error("Gagal mengambil playlist:", error);
         return {
             props: {
                 error: error.message,
