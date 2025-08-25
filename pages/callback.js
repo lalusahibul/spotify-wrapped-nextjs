@@ -27,12 +27,10 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (response.ok) {
-            // Simpan token akses sebagai cookie HTTP-only
             res.setHeader(
                 "Set-Cookie",
                 `spotifyAccessToken=${data.access_token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${data.expires_in}`
             );
-            // Redirect ke halaman playlists setelah token berhasil disimpan
             res.redirect("/playlists");
         } else {
             return res.status(response.status).json(data);
