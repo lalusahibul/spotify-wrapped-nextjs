@@ -3,28 +3,53 @@ import { useEffect, useState } from "react";
 
 export default function Callback() {
     const router = useRouter();
-    const [code, setCode] = useState(null);
+    const { code } = router.query;
+    const [token, setToken] = useState(null);
 
     useEffect(() => {
-        if (router.isReady) {
-            const urlCode = router.query.code;
-            setCode(urlCode || null);
-        }
-    }, [router.isReady, router.query]);
+        if (!code) return;
 
-    if (!code) return <div className="p-6 text-white">Loading...</div>;
+        const getToken = async () => {
+            try {
+                const res = await fetch("https://accounts.spotify.com/api/token", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        Authorization:
+                            "Basic " +
+                            btoa(
+                                process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID +
+                                ":" +
+                                process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET
+                            ),
+                    },
+                    body: new URLSearchParams({
+                        grant_type: "authorization_code",
+                        code: code,
+                        redirect_uri: "https://spotify-wrapped-nextjs.vercel.app/callback",
+                    }),
+                });
+
+                const data = await res.json();
+                console.log("Token Response:", data);
+                setToken(data);
+            } catch (error) {
+                console.error("Error fetching token:", error);
+            }
+        };
+
+        getToken();
+    }, [code]);
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
-            <h1 className="text-2xl font-bold mb-4">Spotify Authorization Code</h1>
-            <p className="mb-2 text-green-400 break-all">{code}</p>
-
-            <button
-                onClick={() => navigator.clipboard.writeText(code)}
-                className="px-4 py-2 mt-4 bg-green-600 hover:bg-green-700 rounded-lg"
-            >
-                Copy Code
-            </button>
+        <div>
+            <h1>Spotify Callback</h1>
+            <p>Authorization Code: {code}</p>
+            {token ? (
+                <pre>{JSON.stringify(token, null, 2)}</pre>
+            ) : (
+                <p>Menukar code dengan token...</p>
+            )}
         </div>
     );
 }
