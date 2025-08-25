@@ -20,23 +20,19 @@ export default function Callback() {
                 const accessToken = data.access_token;
 
                 if (accessToken) {
-                    // Redirect ke halaman playlists dengan token di query
+                    // redirect ke halaman playlist dengan token di query
                     router.replace({
-                        pathname: "/pages/playlists",
+                        pathname: "/playlists",
                         query: { token: accessToken },
                     });
                 }
             } catch (err) {
-                console.error("Error fetching token:", err);
+                console.error(err);
             }
         };
 
         getTokenAndRedirect();
     }, [router.isReady, code]);
 
-    return (
-        <div>
-            <h1>Menukar code dengan token...</h1>
-        </div>
-    );
+    return <p>Menukar code dengan token...</p>;
 }

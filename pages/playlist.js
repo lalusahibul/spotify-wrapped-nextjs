@@ -1,31 +1,26 @@
 import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
 
 export default function Playlists() {
-    const router = useRouter();
-    const { token } = router.query;
     const [playlists, setPlaylists] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!token) return;
-
         const fetchPlaylists = async () => {
             try {
-                const res = await fetch("https://api.spotify.com/v1/me/playlists", {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-
+                const res = await fetch("/api/spotify-playlists");
                 const data = await res.json();
-                setPlaylists(data.items || []);
+                setPlaylists(data || []);
             } catch (err) {
                 console.error(err);
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchPlaylists();
-    }, [token]);
+    }, []);
 
-    if (!token) return <p>Menunggu token...</p>;
+    if (loading) return <p>Memuat playlist...</p>;
 
     return (
         <div>
@@ -35,7 +30,9 @@ export default function Playlists() {
                     <li key={pl.id}>
                         <img src={pl.images[0]?.url} alt={pl.name} width={100} />
                         <p>{pl.name} - {pl.tracks.total} tracks</p>
-                        <a href={pl.external_urls.spotify} target="_blank">Buka di Spotify</a>
+                        <a href={pl.external_urls.spotify} target="_blank" rel="noopener noreferrer">
+                            Buka di Spotify
+                        </a>
                     </li>
                 ))}
             </ul>
