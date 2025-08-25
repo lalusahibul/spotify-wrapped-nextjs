@@ -1,29 +1,30 @@
+import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
 export default function Playlists() {
+    const router = useRouter();
+    const { token } = router.query;
     const [playlists, setPlaylists] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
 
     useEffect(() => {
+        if (!token) return;
+
         const fetchPlaylists = async () => {
             try {
-                const res = await fetch("/api/spotify-playlists");
-                if (!res.ok) throw new Error("API not found or token missing");
+                const res = await fetch("https://api.spotify.com/v1/me/playlists", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
                 const data = await res.json();
-                setPlaylists(data);
+                setPlaylists(data.items || []);
             } catch (err) {
-                setError(err.message);
                 console.error(err);
-            } finally {
-                setLoading(false);
             }
         };
-        fetchPlaylists();
-    }, []);
 
-    if (loading) return <p>Memuat playlist...</p>;
-    if (error) return <p>Error: {error}</p>;
+        fetchPlaylists();
+    }, [token]);
+
+    if (!token) return <p>Menunggu token...</p>;
 
     return (
         <div>

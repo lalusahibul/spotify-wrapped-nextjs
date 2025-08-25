@@ -8,7 +8,7 @@ export default function Callback() {
     useEffect(() => {
         if (!router.isReady || !code) return;
 
-        const exchangeCode = async () => {
+        const getToken = async () => {
             try {
                 const res = await fetch("/api/auth/token", {
                     method: "POST",
@@ -17,19 +17,16 @@ export default function Callback() {
                 });
                 const data = await res.json();
 
-                if (data.success) {
-                    // redirect **hanya setelah token berhasil disimpan**
-                    router.replace("/playlists");
-                } else {
-                    console.error("Token exchange failed:", data);
+                if (data.access_token) {
+                    router.replace(`/playlists?token=${data.access_token}`);
                 }
             } catch (err) {
                 console.error(err);
             }
         };
 
-        exchangeCode();
+        getToken();
     }, [router.isReady, code]);
 
-    return <p>Menukar kode Spotify dan redirect...</p>;
+    return <p>Menukar kode Spotify...</p>;
 }
