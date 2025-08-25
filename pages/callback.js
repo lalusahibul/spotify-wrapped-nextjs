@@ -1,31 +1,18 @@
-// pages/callback.js
-export default async function handler(req, res) {
-    const code = req.query.code || null;
+const clientId = process.env.SPOTIFY_CLIENT_ID;
+const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
 
-    const response = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization":
-                "Basic " +
-                Buffer.from(
-                    process.env.SPOTIFY_CLIENT_ID + ":" + process.env.SPOTIFY_CLIENT_SECRET
-                ).toString("base64"),
-        },
-        body: new URLSearchParams({
-            grant_type: "authorization_code",
-            code: code,
-            redirect_uri: process.env.SPOTIFY_REDIRECT_URI, // HARUS sama dengan yang di dashboard
-        }),
-    });
+const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
-    const data = await response.json();
-    console.log("Spotify Token Response:", data);
-
-    if (data.error) {
-        return res.status(400).json(data);
-    }
-
-    // Simpan access token ke cookie/session
-    res.status(200).json(data);
-}
+const res = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+        Authorization: `Basic ${basicAuth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: redirectUri,
+    }),
+});
