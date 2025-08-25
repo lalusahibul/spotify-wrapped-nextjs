@@ -1,32 +1,30 @@
-export default async function handler(req, res) {
-    const code = req.query.code || null;
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
-    const response = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Authorization:
-                "Basic " +
-                Buffer.from(
-                    process.env.SPOTIFY_CLIENT_ID +
-                    ":" +
-                    process.env.SPOTIFY_CLIENT_SECRET
-                ).toString("base64"),
-        },
-        body: new URLSearchParams({
-            code: code,
-            redirect_uri: process.env.SPOTIFY_REDIRECT_URI,
-            grant_type: "authorization_code",
-        }),
-    });
+export default function Callback() {
+    const router = useRouter();
+    const [code, setCode] = useState(null);
 
-    const data = await response.json();
+    useEffect(() => {
+        if (router.isReady) {
+            const urlCode = router.query.code;
+            setCode(urlCode || null);
+        }
+    }, [router.isReady, router.query]);
 
-    if (data.access_token) {
-        // Simpan token di cookie/session
-        res.setHeader("Set-Cookie", `spotify_access_token=${data.access_token}; Path=/; HttpOnly`);
-        res.redirect("/"); // balik ke homepage
-    } else {
-        res.status(400).json(data);
-    }
+    if (!code) return <div className="p-6 text-white">Loading...</div>;
+
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
+            <h1 className="text-2xl font-bold mb-4">Spotify Authorization Code</h1>
+            <p className="mb-2 text-green-400 break-all">{code}</p>
+
+            <button
+                onClick={() => navigator.clipboard.writeText(code)}
+                className="px-4 py-2 mt-4 bg-green-600 hover:bg-green-700 rounded-lg"
+            >
+                Copy Code
+            </button>
+        </div>
+    );
 }
