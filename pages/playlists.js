@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import TopSongs from "../components/TopSongs";
+import TopSongs from "../components/topsongs";
 
 export default function Playlists({ playlists, topSongs, error }) {
     if (error) {
