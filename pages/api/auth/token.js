@@ -1,4 +1,3 @@
-// pages/api/auth/token.js
 export default async function handler(req, res) {
     if (req.method !== "POST") {
         return res.status(405).json({ error: "Method not allowed" });
@@ -6,27 +5,33 @@ export default async function handler(req, res) {
 
     const { code } = req.body;
 
+    const basicAuth = Buffer.from(
+        `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
+    ).toString("base64");
+
     try {
         const response = await fetch("https://accounts.spotify.com/api/token", {
             method: "POST",
             headers: {
+                "Authorization": `Basic ${basicAuth}`,
                 "Content-Type": "application/x-www-form-urlencoded",
-                Authorization:
-                    "Basic " +
-                    Buffer.from(
-                        process.env.CLIENT_ID + ":" + process.env.CLIENT_SECRET
-                    ).toString("base64"),
             },
             body: new URLSearchParams({
                 grant_type: "authorization_code",
-                code: code,
-                redirect_uri: process.env.REDIRECT_URI, // HARUS sama persis dengan yang didaftarkan di Spotify
+                code,
+                redirect_uri: process.env.SPOTIFY_REDIRECT_URI,
             }),
         });
 
         const data = await response.json();
-        return res.status(200).json(data);
-    } catch (err) {
-        return res.status(500).json({ error: "Failed to fetch token", details: err });
+
+        if (response.ok) {
+            return res.status(200).json(data);
+        } else {
+            return res.status(400).json(data);
+        }
+    } catch (error) {
+        console.error("Token error:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
     }
 }
