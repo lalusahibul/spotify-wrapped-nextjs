@@ -1,39 +1,33 @@
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import Cookies from 'js-cookie';
 
-export default function Playlists() {
-    const router = useRouter();
-    const { token } = router.query;
-    const [playlists, setPlaylists] = useState([]);
+export default async function handler(req, res) {
+    const accessToken = Cookies.get("spotifyAccessToken");
 
-    useEffect(() => {
-        if (!token) return;
+    if (!accessToken) {
+        return res.status(401).json({ error: "Access token not found" });
+    }
 
-        const fetchPlaylists = async () => {
-            try {
-                const res = await fetch("https://api.spotify.com/v1/me/playlists", {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                const data = await res.json();
-                setPlaylists(data.items || []);
-            } catch (err) {
-                console.error(err);
-            }
-        };
+    try {
+        const response = await fetch("https://api.spotify.com/v1/me/playlists", {
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+            },
+        });
 
-        fetchPlaylists();
-    }, [token]);
+        if (response.status === 401) {
+            // Token kadaluarsa, kirim respon error agar user login ulang
+            return res.status(401).json({ error: "Token expired or invalid" });
+        }
 
-    if (!token) return <p>Menunggu token...</p>;
+        const data = await response.json();
 
-    return (
-        <div>
-            <h1>Daftar Playlist Spotify</h1>
-            <ul>
-                {playlists.map((pl) => (
-                    <li key={pl.id}>{pl.name} - {pl.tracks.total} tracks</li>
-                ))}
-            </ul>
-        </div>
-    );
+        if (response.ok) {
+            res.status(200).json(data.items);
+        } else {
+            res.status(response.status).json(data);
+        }
+    } catch (error) {
+        console.error("Failed to fetch playlists:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 }

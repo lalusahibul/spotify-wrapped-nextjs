@@ -1,32 +1,44 @@
-import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { URLSearchParams } from "url";
 
-export default function Callback() {
-    const router = useRouter();
-    const { code } = router.query;
+export default async function handler(req, res) {
+    const { code } = req.query;
+    const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
-    useEffect(() => {
-        if (!router.isReady || !code) return;
+    if (!code) {
+        return res.status(400).json({ error: "Missing authorization code" });
+    }
 
-        const getToken = async () => {
-            try {
-                const res = await fetch("/api/auth/token", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ code }),
-                });
-                const data = await res.json();
+    try {
+        const response = await fetch("https://accounts.spotify.com/api/token", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+            },
+            body: new URLSearchParams({
+                grant_type: "authorization_code",
+                code,
+                redirect_uri: redirectUri,
+            }).toString(),
+        });
 
-                if (data.access_token) {
-                    router.replace(`/playlists?token=${data.access_token}`);
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        };
+        const data = await response.json();
 
-        getToken();
-    }, [router.isReady, code]);
-
-    return <p>Menukar kode Spotify...</p>;
+        if (response.ok) {
+            // Simpan token akses sebagai cookie HTTP-only
+            res.setHeader(
+                "Set-Cookie",
+                `spotifyAccessToken=${data.access_token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${data.expires_in}`
+            );
+            // Redirect ke halaman playlists setelah token berhasil disimpan
+            res.redirect("/playlists");
+        } else {
+            return res.status(response.status).json(data);
+        }
+    } catch (error) {
+        console.error("Token exchange failed:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
 }
