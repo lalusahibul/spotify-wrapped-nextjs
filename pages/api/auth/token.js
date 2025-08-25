@@ -26,7 +26,9 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (response.ok) {
-            return res.status(200).json(data);
+            // simpan token sementara di memory server
+            global.spotifyAccessToken = data.access_token;
+            return res.status(200).json({ success: true });
         } else {
             return res.status(400).json(data);
         }

@@ -8,31 +8,28 @@ export default function Callback() {
     useEffect(() => {
         if (!router.isReady || !code) return;
 
-        const getTokenAndRedirect = async () => {
+        const exchangeCode = async () => {
             try {
                 const res = await fetch("/api/auth/token", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ code }),
                 });
-
                 const data = await res.json();
-                const accessToken = data.access_token;
 
-                if (accessToken) {
-                    // redirect ke halaman playlist dengan token di query
-                    router.replace({
-                        pathname: "/playlists",
-                        query: { token: accessToken },
-                    });
+                if (data.success) {
+                    // redirect **hanya setelah token berhasil disimpan**
+                    router.replace("/playlists");
+                } else {
+                    console.error("Token exchange failed:", data);
                 }
             } catch (err) {
                 console.error(err);
             }
         };
 
-        getTokenAndRedirect();
+        exchangeCode();
     }, [router.isReady, code]);
 
-    return <p>Menukar code dengan token...</p>;
+    return <p>Menukar kode Spotify dan redirect...</p>;
 }
