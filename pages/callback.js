@@ -1,31 +1,47 @@
-// pages/callback.js
-export default async function handler(req, res) {
-    const code = req.query.code || null;
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
-    const response = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization":
-                "Basic " +
-                Buffer.from(
-                    process.env.SPOTIFY_CLIENT_ID + ":" + process.env.SPOTIFY_CLIENT_SECRET
-                ).toString("base64"),
-        },
-        body: new URLSearchParams({
-            grant_type: "authorization_code",
-            code: code,
-            redirect_uri: process.env.SPOTIFY_REDIRECT_URI, // HARUS sama dengan yang di dashboard
-        }),
-    });
+export default function Callback() {
+    const router = useRouter();
+    const { code } = router.query;
+    const [token, setToken] = useState(null);
 
-    const data = await response.json();
-    console.log("Spotify Token Response:", data);
+    useEffect(() => {
+        if (!router.isReady) return; // tunggu router siap
+        if (!code) return;
 
-    if (data.error) {
-        return res.status(400).json(data);
-    }
+        const getToken = async () => {
+            try {
+                const res = await fetch("/api/auth/token", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code }),
+                });
 
-    // Simpan access token ke cookie/session
-    res.status(200).json(data);
+                const data = await res.json();
+                setToken(data);
+            } catch (error) {
+                console.error("Error fetching token:", error);
+            }
+        };
+
+        getToken();
+    }, [router.isReady, code]);
+
+    return (
+        <div>
+            <h1>Spotify Callback</h1>
+            <p>Authorization Code: {code}</p>
+            {token ? (
+                <pre>{JSON.stringify(token, null, 2)}</pre>
+            ) : (
+                <p>Menukar code dengan token...</p>
+            )}
+        </div>
+    );
+}
+
+// 👇 ini penting biar Next.js tidak prerender halaman ini saat build
+export async function getServerSideProps() {
+    return { props: {} };
 }
