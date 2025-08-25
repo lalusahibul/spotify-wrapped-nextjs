@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import TopSongs from "../components/topsongs";
 
 export default function Playlists({ playlists, error }) {
     if (error) {
@@ -21,6 +22,7 @@ export default function Playlists({ playlists, error }) {
                     </li>
                 ))}
             </ul>
+            <TopSongs />
         </div>
     );
 }
