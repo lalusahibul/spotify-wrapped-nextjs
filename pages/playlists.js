@@ -1,15 +1,46 @@
-export default async function handler(req, res) {
-    const cookies = req.headers.cookie;
-    const spotifyAccessToken = cookies
-        ?.split(';')
-        .find(row => row.trim().startsWith('spotifyAccessToken='))
-        ?.split('=')[1];
+import { useEffect, useState } from "react";
 
-    if (!spotifyAccessToken) {
-        return res.status(401).json({ error: "Access token not found" });
+export default function Playlists({ playlists, error }) {
+    if (error) {
+        return <p>Error: {error}</p>;
     }
 
+    if (!playlists) {
+        return <p>Memuat playlist...</p>;
+    }
+
+    return (
+        <div>
+            <h1>Daftar Playlist Spotify</h1>
+            <ul>
+                {playlists.map((pl) => (
+                    <li key={pl.id}>
+                        <a href={pl.external_urls.spotify} target="_blank" rel="noopener noreferrer">
+                            {pl.name} - {pl.tracks.total} lagu
+                        </a>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
+export async function getServerSideProps(context) {
     try {
+        const cookies = context.req.headers.cookie || '';
+        const spotifyAccessToken = cookies
+            .split(';')
+            .find(row => row.trim().startsWith('spotifyAccessToken='))
+            ?.split('=')[1];
+
+        if (!spotifyAccessToken) {
+            return {
+                props: {
+                    error: "Token akses tidak ditemukan atau sudah kadaluarsa. Silakan login ulang."
+                }
+            };
+        }
+
         const response = await fetch("https://api.spotify.com/v1/me/playlists", {
             headers: {
                 "Authorization": `Bearer ${spotifyAccessToken}`,
@@ -17,19 +48,32 @@ export default async function handler(req, res) {
         });
 
         if (response.status === 401) {
-            // Token kadaluarsa, kirim respon error agar user login ulang
-            return res.status(401).json({ error: "Token expired or invalid" });
+            return {
+                redirect: {
+                    destination: '/',
+                    permanent: false,
+                },
+            };
+        }
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || "Gagal mengambil playlist");
         }
 
         const data = await response.json();
 
-        if (response.ok) {
-            return res.status(200).json(data.items);
-        } else {
-            return res.status(response.status).json(data);
-        }
+        return {
+            props: {
+                playlists: data.items,
+            },
+        };
     } catch (error) {
-        console.error("Failed to fetch playlists:", error);
-        return res.status(500).json({ error: "Internal Server Error" });
+        console.error("Gagal mengambil playlist:", error);
+        return {
+            props: {
+                error: error.message,
+            },
+        };
     }
 }
