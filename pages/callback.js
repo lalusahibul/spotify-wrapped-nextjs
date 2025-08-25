@@ -1,16 +1,14 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export default function Callback() {
     const router = useRouter();
     const { code } = router.query;
-    const [token, setToken] = useState(null);
 
     useEffect(() => {
-        if (!router.isReady) return; // tunggu router siap
-        if (!code) return;
+        if (!router.isReady || !code) return;
 
-        const getToken = async () => {
+        const getTokenAndRedirect = async () => {
             try {
                 const res = await fetch("/api/auth/token", {
                     method: "POST",
@@ -19,29 +17,26 @@ export default function Callback() {
                 });
 
                 const data = await res.json();
-                setToken(data);
-            } catch (error) {
-                console.error("Error fetching token:", error);
+                const accessToken = data.access_token;
+
+                if (accessToken) {
+                    // Redirect ke halaman playlists dengan token di query
+                    router.replace({
+                        pathname: "/pages/playlists",
+                        query: { token: accessToken },
+                    });
+                }
+            } catch (err) {
+                console.error("Error fetching token:", err);
             }
         };
 
-        getToken();
+        getTokenAndRedirect();
     }, [router.isReady, code]);
 
     return (
         <div>
-            <h1>Spotify Callback</h1>
-            <p>Authorization Code: {code}</p>
-            {token ? (
-                <pre>{JSON.stringify(token, null, 2)}</pre>
-            ) : (
-                <p>Menukar code dengan token...</p>
-            )}
+            <h1>Menukar code dengan token...</h1>
         </div>
     );
-}
-
-// 👇 ini penting biar Next.js tidak prerender halaman ini saat build
-export async function getServerSideProps() {
-    return { props: {} };
 }
