@@ -22,8 +22,12 @@ export default function Playlists({ playlists, topSongs, error }) {
                     </li>
                 ))}
             </ul>
+<<<<<<< HEAD
             ---
             <TopSongs songs={topSongs} />
+=======
+            <TopSongs />
+>>>>>>> d96c9001fe8dbb97f15809d5b7ecccf4490c14d5
         </div>
     );
 }
