@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import TopSongs from "../components/topsongs";
+import TopSongs from "../components/TopSongs";
 
 export default function Playlists({ playlists, topSongs, error }) {
     if (error) {
@@ -49,13 +48,10 @@ export async function getServerSideProps(context) {
             "Authorization": `Bearer ${spotifyAccessToken}`,
         };
 
-        // Ambil data playlist
-        const playlistsResponse = await fetch("https://api.spotify.com/v1/me/playlists", { headers });
-        const playlistsData = await playlistsResponse.json();
-
-        // Ambil data lagu teratas
-        const topSongsResponse = await fetch("http://googleusercontent.com/spotify.com/5", { headers });
-        const topSongsData = await topSongsResponse.json();
+        const [playlistsResponse, topSongsResponse] = await Promise.all([
+            fetch("https://api.spotify.com/v1/me/playlists", { headers }),
+            fetch("http://googleusercontent.com/spotify.com/5", { headers }),
+        ]);
 
         if (playlistsResponse.status === 401 || topSongsResponse.status === 401) {
             return {
@@ -69,6 +65,11 @@ export async function getServerSideProps(context) {
         if (!playlistsResponse.ok || !topSongsResponse.ok) {
             throw new Error("Gagal mengambil data dari Spotify.");
         }
+
+        const [playlistsData, topSongsData] = await Promise.all([
+            playlistsResponse.json(),
+            topSongsResponse.json(),
+        ]);
 
         return {
             props: {
