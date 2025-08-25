@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
+import TopSongs from "../components/topsongs";
 
-export default function Playlists({ playlists, error }) {
+export default function Playlists({ playlists, topSongs, error }) {
     if (error) {
         return <p>Error: {error}</p>;
     }
 
-    if (!playlists) {
-        return <p>Memuat playlist...</p>;
+    if (!playlists || !topSongs) {
+        return <p>Memuat data Spotify...</p>;
     }
 
     return (
@@ -21,6 +22,8 @@ export default function Playlists({ playlists, error }) {
                     </li>
                 ))}
             </ul>
+            ---
+            <TopSongs songs={topSongs} />
         </div>
     );
 }
@@ -35,19 +38,26 @@ export async function getServerSideProps(context) {
 
         if (!spotifyAccessToken) {
             return {
-                props: {
-                    error: "Token akses tidak ditemukan atau sudah kadaluarsa. Silakan login ulang."
-                }
+                redirect: {
+                    destination: '/',
+                    permanent: false,
+                },
             };
         }
 
-        const response = await fetch("https://api.spotify.com/v1/me/playlists", {
-            headers: {
-                "Authorization": `Bearer ${spotifyAccessToken}`,
-            },
-        });
+        const headers = {
+            "Authorization": `Bearer ${spotifyAccessToken}`,
+        };
 
-        if (response.status === 401) {
+        // Ambil data playlist
+        const playlistsResponse = await fetch("https://api.spotify.com/v1/me/playlists", { headers });
+        const playlistsData = await playlistsResponse.json();
+
+        // Ambil data lagu teratas
+        const topSongsResponse = await fetch("http://googleusercontent.com/spotify.com/5", { headers });
+        const topSongsData = await topSongsResponse.json();
+
+        if (playlistsResponse.status === 401 || topSongsResponse.status === 401) {
             return {
                 redirect: {
                     destination: '/',
@@ -56,20 +66,18 @@ export async function getServerSideProps(context) {
             };
         }
 
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || "Gagal mengambil playlist");
+        if (!playlistsResponse.ok || !topSongsResponse.ok) {
+            throw new Error("Gagal mengambil data dari Spotify.");
         }
-
-        const data = await response.json();
 
         return {
             props: {
-                playlists: data.items,
+                playlists: playlistsData.items,
+                topSongs: topSongsData.items,
             },
         };
     } catch (error) {
-        console.error("Gagal mengambil playlist:", error);
+        console.error("Gagal mengambil data:", error);
         return {
             props: {
                 error: error.message,
